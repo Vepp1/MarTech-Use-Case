@@ -1,0 +1,27 @@
+[
+  {
+    "id": "user-100",
+    "salutation": "Ms.",
+    "phone": "+49 89 555 0100"
+  },
+  {
+    "id": "user-210",
+    "salutation": "Mr.",
+    "phone": "+43 1 222 0123"
+  },
+  {
+    "id": "user-401",
+    "salutation": "Ms.",
+    "phone": "+41 44 123 7788"
+  },
+  {
+    "id": "user-512",
+    "salutation": "Mr.",
+    "phone": "+49 30 990 4477"
+  },
+  {
+    "id": "user-725",
+    "salutation": "Ms.",
+    "phone": "+43 512 9012"
+  }
+]

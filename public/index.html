@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediaSaturn Demo Store</title>
+    <style>
+      :root {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1d1d1f;
+        background-color: #f6f7fb;
+      }
+      body {
+        margin: 0;
+      }
+      header {
+        background: linear-gradient(135deg, #0e3d7c, #3b82f6);
+        color: #fff;
+        padding: 3rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2.5rem;
+      }
+      main {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+      .card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 30px rgba(14, 61, 124, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .card h3 {
+        margin-top: 0;
+      }
+      .card button {
+        border: none;
+        background: #0e3d7c;
+        color: #fff;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+      .card button:hover {
+        background: #0b305f;
+      }
+      .actions {
+        margin-top: 3rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .actions button {
+        border: none;
+        padding: 0.9rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 14px;
+        cursor: pointer;
+      }
+      .actions .login {
+        background: #1d4ed8;
+        color: #fff;
+      }
+      .checkout {
+        background: #065f46;
+        color: #fff;
+      }
+      .purchase {
+        background: #ca8a04;
+        color: #1d1d1f;
+      }
+      .consent-banner {
+        background: #0e1e37;
+        color: #fff;
+        padding: 1rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .consent-banner.hidden {
+        display: none;
+      }
+      .consent-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .consent-actions button {
+        border: none;
+        border-radius: 999px;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      .consent-actions .accept {
+        background: #16a34a;
+        color: #fff;
+      }
+      .consent-actions .decline {
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+      }
+      #feed {
+        margin-top: 3rem;
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 30px rgba(14, 61, 124, 0.06);
+      }
+      #feed pre {
+        background: #0e1e37;
+        color: #7dd3fc;
+        border-radius: 12px;
+        padding: 1rem;
+        overflow-x: auto;
+      }
+      footer {
+        text-align: center;
+        padding: 2rem;
+        color: #555;
+      }
+    </style>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      window.__msConsent = window.__msConsent || { marketing: false };
+    </script>
+  </head>
+  <body>
+    <div class="consent-banner" id="consent-banner">
+      <p>
+        We use analytics tags to understand how people interact with the demo
+        store. Please confirm if marketing tracking is allowed.
+      </p>
+      <div class="consent-actions">
+        <button class="accept" id="consent-accept">Allow tracking</button>
+        <button class="decline" id="consent-decline">Decline</button>
+      </div>
+    </div>
+    <header>
+      <h1>MediaSaturn Demo Store</h1>
+      <p>
+        Use this page to wire Google Tag Manager, push ecommerce events into the
+        dataLayer, and forward them to the local collector.
+      </p>
+    </header>
+    <main>
+      <section class="grid" id="products"></section>
+      <section class="actions">
+        <button id="login-btn" class="login">Trigger User Login (user-401)</button>
+        <button id="checkout" class="checkout">Trigger Checkout</button>
+        <button id="purchase" class="purchase">Trigger Purchase</button>
+      </section>
+      <section id="feed">
+        <h2>Recent dataLayer pushes</h2>
+        <p>
+          Use this feed as a sanity check while building GTM triggers/tags. Only
+          the last five events are shown.
+        </p>
+        <div id="feed-entries"></div>
+      </section>
+    </main>
+    <footer>Everything runs locally on http://localhost:4000</footer>
+
+    <script>
+      const CONSENT_KEY = 'msConsentMarketing';
+      const CONSENT_COOKIE = 'ms_consent_marketing';
+      const sampleProducts = [
+        {
+          sku: 'MS-1001',
+          name: 'Smart Speaker',
+          price: 129.99,
+          category: 'Smart Home'
+        },
+        {
+          sku: 'MS-2004',
+          name: '4K OLED TV',
+          price: 1499.0,
+          category: 'Home Entertainment'
+        },
+        {
+          sku: 'MS-3100',
+          name: 'Noise Cancelling Headphones',
+          price: 299.0,
+          category: 'Audio'
+        }
+      ];
+
+      const sessionId = `session-${crypto.randomUUID()}`;
+      window.localStorage.setItem('demoSessionId', sessionId);
+      const defaultUser = {
+        id: 'user-401',
+        email: 'amelie.schmidt@example.com'
+      };
+
+      function loadStoredUser() {
+        const raw = window.localStorage.getItem('demoUser');
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw);
+        } catch (err) {
+          console.warn('Unable to parse stored user', err);
+          window.localStorage.removeItem('demoUser');
+          return null;
+        }
+      }
+
+      function persistUser(user) {
+        if (user) {
+          window.localStorage.setItem('demoUser', JSON.stringify(user));
+        } else {
+          window.localStorage.removeItem('demoUser');
+        }
+      }
+
+      let activeUser = loadStoredUser();
+
+      const feedEntries = [];
+
+      function pushPageView() {
+        const payload = {
+          event: 'page_view',
+          sessionId,
+          marketing_consent: window.__msConsent.marketing
+        };
+        if (activeUser) {
+          payload.user = activeUser;
+        }
+        window.dataLayer.push(payload);
+        feedEntries.unshift({ timestamp: new Date().toISOString(), payload });
+        renderFeed();
+      }
+
+      function readStoredConsent() {
+        const cookieMatch = document.cookie.match(
+          new RegExp(`(?:^|; )${CONSENT_COOKIE}=([^;]*)`)
+        );
+        if (cookieMatch) {
+          return { value: cookieMatch[1] === 'true', exists: true };
+        }
+        window.localStorage.removeItem(CONSENT_KEY);
+        return { value: false, exists: false };
+      }
+
+      function setConsentState(
+        granted,
+        { emitEvent = true, persist = true, clear = false, hideBanner } = {}
+      ) {
+        window.__msConsent = { marketing: granted };
+        if (persist) {
+          window.localStorage.setItem(CONSENT_KEY, String(granted));
+          document.cookie = `${CONSENT_COOKIE}=${granted}; path=/; max-age=31536000; SameSite=Lax`;
+        } else if (clear) {
+          window.localStorage.removeItem(CONSENT_KEY);
+          document.cookie = `${CONSENT_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
+        }
+        const banner = document.getElementById('consent-banner');
+        const shouldHide = typeof hideBanner === 'boolean' ? hideBanner : granted;
+        banner.classList.toggle('hidden', shouldHide);
+        if (emitEvent) {
+          window.dataLayer.push({
+            event: 'consent_update',
+            marketing_consent: granted
+          });
+          feedEntries.unshift({
+            timestamp: new Date().toISOString(),
+            payload: { event: 'consent_update', marketing_consent: granted }
+          });
+          renderFeed();
+        }
+      }
+
+      function initConsentManagement() {
+        const stored = readStoredConsent();
+        if (stored.exists) {
+          setConsentState(stored.value, {
+            emitEvent: true,
+            persist: false
+          });
+        } else {
+          window.__msConsent = { marketing: false };
+          document.getElementById('consent-banner').classList.remove('hidden');
+        }
+        setTimeout(pushPageView, 0);
+        document
+          .getElementById('consent-accept')
+          .addEventListener('click', () => setConsentState(true));
+        document
+          .getElementById('consent-decline')
+          .addEventListener('click', () => setConsentState(false, { hideBanner: true }));
+      }
+
+      function pushToDataLayer(eventName, data) {
+        const payload = { event: eventName, sessionId, ...data };
+        if (activeUser) {
+          payload.user = activeUser;
+        }
+        payload.marketing_consent = window.__msConsent.marketing;
+        window.dataLayer.push(payload);
+        feedEntries.unshift({ timestamp: new Date().toISOString(), payload });
+        renderFeed();
+      }
+
+      function renderProducts() {
+        const container = document.getElementById('products');
+        sampleProducts.forEach((product) => {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.innerHTML = `
+            <div>
+              <h3>${product.name}</h3>
+              <p>SKU: ${product.sku}</p>
+              <p>Category: ${product.category}</p>
+              <p><strong>€${product.price.toFixed(2)}</strong></p>
+            </div>
+            <button data-sku="${product.sku}">Add to cart</button>
+          `;
+          card.querySelector('button').addEventListener('click', () => {
+            pushToDataLayer('add_to_cart', {
+              ecommerce: { items: [product] }
+            });
+          });
+          container.appendChild(card);
+        });
+      }
+
+      function updateLoginButton() {
+        const button = document.getElementById('login-btn');
+        if (!button) return;
+        if (activeUser) {
+          button.textContent = `Logged in as ${activeUser.email}`;
+          button.disabled = true;
+        } else {
+          button.textContent = 'Simulate Login (user-401)';
+          button.disabled = false;
+        }
+      }
+
+      function wireGlobalActions() {
+        document.getElementById('login-btn').addEventListener('click', () => {
+          activeUser = defaultUser;
+          persistUser(activeUser);
+          pushToDataLayer('user_login', { user: activeUser });
+          updateLoginButton();
+        });
+
+        document.getElementById('checkout').addEventListener('click', () => {
+          pushToDataLayer('checkout', {
+            ecommerce: {
+              checkout_step: 1,
+              items: sampleProducts.slice(0, 2)
+            }
+          });
+        });
+
+        document.getElementById('purchase').addEventListener('click', () => {
+          pushToDataLayer('purchase', {
+            ecommerce: {
+              transaction_id: Math.random().toString(36).slice(2, 11),
+              revenue: 1828.99,
+              currency: 'EUR',
+              items: sampleProducts
+            },
+            user: activeUser
+          });
+        });
+      }
+
+      function renderFeed() {
+        const container = document.getElementById('feed-entries');
+        container.innerHTML = '';
+        feedEntries.slice(0, 5).forEach((entry) => {
+          const wrapper = document.createElement('pre');
+          wrapper.textContent = JSON.stringify(entry, null, 2);
+          container.appendChild(wrapper);
+        });
+      }
+
+      initConsentManagement();
+      renderProducts();
+      wireGlobalActions();
+      updateLoginButton();
+      renderFeed();
+    </script>
+  </body>
+</html>

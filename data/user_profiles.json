@@ -1,0 +1,38 @@
+[
+  {
+    "id": "user-100",
+    "email": "maria.fernandez@example.com",
+    "loyalty_status": "gold",
+    "country": "Germany"
+  },
+  {
+    "id": "user-210",
+    "email": "liam.koch@example.com",
+    "loyalty_status": "silver",
+    "country": "Austria"
+  },
+  {
+    "id": "user-401",
+    "email": "amelie.schmidt@example.com",
+    "loyalty_status": "new",
+    "country": "Switzerland"
+  },
+  {
+    "id": "user-512",
+    "email": "noah.fischer@example.com",
+    "loyalty_status": "gold",
+    "country": "Germany"
+  },
+  {
+    "id": "user-725",
+    "email": "ines.moser@example.com",
+    "loyalty_status": "bronze",
+    "country": "Austria"
+  },
+  {
+    "id": "user-888",
+    "email": "felix.baumann@example.com",
+    "loyalty_status": "new",
+    "country": "Germany"
+  }
+]
