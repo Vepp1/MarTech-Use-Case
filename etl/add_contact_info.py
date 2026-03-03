@@ -6,10 +6,17 @@ def add_contact_info(db_path):
         try:
             print("Database connection successful")
             df = pd.read_sql_query("SELECT DISTINCT user_id, user_email, loyalty_status, country FROM enriched_events WHERE user_id IS NOT NULL", con) # Test query to verify connection
+
             contact_info = pd.read_json("data/user_contact_details.json") # Load contact info from JSON file
             contact_info = contact_info.rename(columns={"id": "user_id"}) # Rename 'id' to 'user_id' for merging
+
             df = df.merge(contact_info, left_on="user_id", right_on="user_id", how="left")
+
+            for col in ["phone", "salutation"]:
+                df[col] = df[col].astype("string").str.strip().replace("", pd.NA) # Replace empty strings with NA
+            
             print(df)
+
         except sqlite3.Error as e: # Handle connection errors
             print(f"Database connection failed: {e}")
             exit(1)
