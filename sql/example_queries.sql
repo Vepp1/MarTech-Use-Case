@@ -50,3 +50,47 @@ SELECT
 FROM json_each(readfile('data/user_profiles.json')) AS profiles
 LEFT JOIN enriched_events ee ON ee.user_id = profiles.value ->> '$.id'
 WHERE ee.user_id IS NULL;
+
+-- Check user_contact_enriched was properly created
+SELECT *
+FROM user_contact_enriched;
+
+-- Merge contact details with enriched_events
+SELECT 
+  ee.raw_event_id,
+  ee.user_id,
+  ee.event_type,
+  ee.user_email,
+  uce.phone,
+  uce.salutation
+FROM enriched_events ee
+LEFT JOIN user_contact_enriched uce ON ee.user_id = uce.user_id
+ORDER BY ee.user_id
+
+-- Count how many enriched events per user in user_contact_enriched
+SELECT
+  uce.user_id,
+  uce.user_email,
+  count(ee.raw_event_id) AS total_events
+FROM user_contact_enriched uce
+LEFT JOIN enriched_events ee ON uce.user_id = ee.user_id
+GROUP BY uce.user_id, uce.user_email
+ORDER BY total_events DESC;
+
+-- Count how many sessions per user had both add_to_cart and purchase events
+SELECT
+  ee.user_id,
+  uce.user_email,
+  COUNT(*) AS sessions_with_add_and_purchase
+FROM (
+  SELECT user_id, session_id
+  FROM enriched_events
+  WHERE event_type IN ('add_to_cart', 'purchase')
+  GROUP BY user_id, session_id
+  HAVING COUNT(DISTINCT event_type) = 2
+) ee
+LEFT JOIN user_contact_enriched uce ON uce.user_id = ee.user_id
+GROUP BY ee.user_id, uce.user_email
+ORDER BY sessions_with_add_and_purchase DESC;
+
+
