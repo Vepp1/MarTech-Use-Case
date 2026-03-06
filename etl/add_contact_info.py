@@ -1,7 +1,13 @@
 import sqlite3
 import pandas as pd
+from pathlib import Path
 
-def add_contact_info(db_path):
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "data" / "events.db"
+CONTACT_PATH = BASE_DIR / "data" / "user_contact_details.json"
+
+def add_contact_info(db_path, contact_path):
+
     target_table = "user_contact_enriched"
 
     with sqlite3.connect(db_path) as con:
@@ -28,9 +34,9 @@ def add_contact_info(db_path):
                                         country
                                         FROM ranked
                                         WHERE rn = 1
-                                    """, con) # Test query to verify connection
+                                    """, con) # Query latest enriched event per user
 
-            contact_info = pd.read_json("data/user_contact_details.json") # Load contact info from JSON file
+            contact_info = pd.read_json(contact_path) # Load contact info from JSON file
             contact_info = contact_info.rename(columns={"id": "user_id"}) # Rename 'id' to 'user_id' for merging
 
             df = df.merge(contact_info, left_on="user_id", right_on="user_id", how="left")
@@ -50,12 +56,12 @@ def add_contact_info(db_path):
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
                 """
-            )
+            ) # Create target table if it doesn't exist
 
             # Write dataframe to a temporary staging table
             df.where(pd.notna(df), None).to_sql("stg_contact", con, if_exists="replace", index=False)
 
-            # Upsert all rows in one SQL statement
+            # Upsert all rows in one SQL statement - ON CONFLICT writes all columns except user_id and updates the timestamp
             con.execute(f"""
             INSERT INTO {target_table} (
                 user_id, user_email, loyalty_status, country, salutation, phone
@@ -72,7 +78,7 @@ def add_contact_info(db_path):
                 updated_at = CURRENT_TIMESTAMP
             """)
 
-            con.execute("DROP TABLE IF EXISTS stg_contact")
+            con.execute("DROP TABLE IF EXISTS stg_contact") # Clean up staging table
             print(f"Upserted {len(df)} rows into {target_table}")
 
         except sqlite3.Error as e: # Handle connection errors
@@ -80,7 +86,7 @@ def add_contact_info(db_path):
             exit(1)
 
 def main():
-    add_contact_info("data/events.db")
+    add_contact_info(DB_PATH, CONTACT_PATH)
 
 if __name__ == "__main__":
     main()
