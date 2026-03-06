@@ -8,7 +8,7 @@
     "dev": "nodemon server.js",
     "etl": "node etl/enrich.js",
     "query": "sqlite3 data/events.db",
-    "etl2" : "python etl/add_contact_info.py"
+    "etl2" : "python3 etl/add_contact_info.py"
   },
   "keywords": [],
   "author": "",
